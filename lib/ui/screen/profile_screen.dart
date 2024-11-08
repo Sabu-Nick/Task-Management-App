@@ -147,10 +147,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       "mobile": _mobileNumberTEController.text.trim(),
 
     };
-    if(_selectedImages !=null){
-      List<int> imageBytes = await _selectedImages.widget.fileData.readBytesSync();
-      requestBody['photo'] =;
-    }
+    final _selectedImages = this._selectedImages;
+    // if(_selectedImages !=null){
+    //   List<int> imageBytes = await _selectedImages.widget.fileData.readBytesSync();
+    //   // requestBody['photo'] =;
+    // }
 
 
 
