@@ -1,13 +1,21 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:taskmanagementapp/data/models/user_model.dart';
+import 'package:taskmanagementapp/data/network_caller.dart';
+import 'package:taskmanagementapp/data/network_response.dart';
+import 'package:taskmanagementapp/data/urls.dart';
 import 'package:taskmanagementapp/ui/controller/auth_controller.dart';
 import 'package:taskmanagementapp/ui/widgets/background_screen.dart';
+import 'package:taskmanagementapp/ui/widgets/center_circular_progress_indicator.dart';
 import 'package:taskmanagementapp/ui/widgets/task_appbar.dart';
 
 import '../style/buttom_style.dart';
 import '../style/text_field_style.dart';
 import '../style/text_style.dart';
 import '../widgets/buttom_nav_bar_screen.dart';
+import '../widgets/snack_bar_mgs.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -24,7 +32,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   XFile? _selectedImages;
   bool _updateProfileInProgress = false;
-
 
   @override
   void initState() {
@@ -64,6 +71,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     keyboardType: TextInputType.name,
                     decoration: TextFormFieldDecoration("Full Name"),
                     style: TextStyle(color: Colors.white),
+                    validator: (String? value){
+                      if(value?.trim().isEmpty?? true){
+                            return 'Enter your name';
+                      } return  null;
+                    },
                   ),
                   SizedBox(height: 10),
                   TextFormField(
@@ -71,6 +83,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     keyboardType: TextInputType.phone,
                     decoration: TextFormFieldDecoration("Mobile Number"),
                     style: TextStyle(color: Colors.white),
+                    validator: (String? value){
+                      if(value?.trim().isEmpty?? true){
+                        return 'Mobile Number';
+                      } return  null;
+                    },
                   ),
                   SizedBox(height: 10),
                   TextFormField(
@@ -80,17 +97,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                   SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _onTapUpdateProfile,
-                    style: ElevatedButtonButtonStyle(),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Update Information',
-                            style: AppTextStyles.buttonTextStyle),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward),
-                      ],
+                  Visibility(
+                    visible: !_updateProfileInProgress,
+                    replacement: CenterCircularProgressIndicator(),
+                    child: ElevatedButton(
+                      onPressed: _onTapUpdateProfile,
+                      style: ElevatedButtonButtonStyle(),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Update Information',
+                              style: AppTextStyles.buttonTextStyle),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -136,7 +157,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-
   Future<void> _updatedProfile() async {
     _updateProfileInProgress = true;
     setState(() {});
@@ -145,20 +165,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       "email": _emailTEController.text.trim(),
       "firstName": _fullNameTEController.text.trim(),
       "mobile": _mobileNumberTEController.text.trim(),
-
     };
     final _selectedImages = this._selectedImages;
-    // if(_selectedImages !=null){
-    //   List<int> imageBytes = await _selectedImages.widget.fileData.readBytesSync();
-    //   // requestBody['photo'] =;
-    // }
+    if (_selectedImages != null) {
+      List<int> imageBytes = await _selectedImages!.readAsBytes();
+      String convertedImage = base64Encode(imageBytes);
+      requestBody['photo'] = convertedImage;
+    }
 
-
-
+    final NetworkResponse response = await NetworkCaller.postRequest(
+        url: Urls.updateProfile, body: requestBody);
     _updateProfileInProgress = false;
     setState(() {});
-  }
 
+    if(response.isSuccess){
+
+      UserModel userModel = UserModel.fromJson(requestBody);
+        AuthController.saveUserData(userModel);
+        SnackBarMessages(context, 'Wow! you are successfully update your profile', true);
+
+    }else{
+      SnackBarMessages(context, 'Opps! you are faild to update your profile', true);
+    }
+
+
+
+  }
 
   Future<void> _pickImage() async {
     ImagePicker imagePicker = ImagePicker();
@@ -171,5 +203,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _onTapUpdateProfile() {
     if (_formKey.currentState!.validate()) {}
+    _updatedProfile();
   }
 }
